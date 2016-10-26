@@ -1,0 +1,169 @@
+/*************************************************************
+just start here !
+TEST_POWER = 1   是功率测试程序
+
+还要在JF24D.h中选择是否开启PA
+**************************************************************/
+#define TEST_POWER    0
+
+
+#include "stm32f10x.h"
+#include "pwm.h"
+#include "usb_lib.h"
+#include "usb_desc.h"
+#include "hw_config.h"
+#include "usb_pwr.h"
+#include "SI24R1.h"
+
+static void JF24D_To_USB_Send_Data(u8 *pBuf,u8 len);
+static void USB_To_JF24D_DataProcessing(u32 data_count);
+
+extern u32 count_out;
+extern u8 buffer_out[VIRTUAL_COM_PORT_DATA_SIZE];
+extern u32 count_in;
+extern u8 buffer_in[VIRTUAL_COM_PORT_DATA_SIZE];
+
+u8 JRxBuf[40];
+u8 JTxCount,JRxCount;
+u8 Local_JF24D_address = 0;
+extern u8 RX_BUF[TX_PLOAD_WIDTH];
+u8 rxAddress[5]= {0} ;
+int main(void)
+{
+    Set_System();
+    SI24R1_IO_Config();
+    USB_Interrupts_Config();
+    Set_USBClock();
+    USB_Init();
+#if(TEST_POWER==0)
+    rx_mode();
+#endif
+#if(WITH_PA==1)
+    PA_EN;
+    PA_Tx;
+#endif
+    while (1)
+    {
+
+        if ((count_out >= 3) && (bDeviceState == CONFIGURED))
+        {
+
+            USB_To_JF24D_DataProcessing( count_out) ;
+            count_out = 0;
+            //  rx_mode();
+        }
+#if(TEST_POWER==0)
+        if(!IRQ)//接收到无线数据
+        {
+
+            RF_LED_H;
+          JRxCount == deal_IRQ();
+            // Wireless_RXData();//接收数据 放到 JRxBuf中
+            if(JRxCount)
+            {
+                JF24D_To_USB_Send_Data(&RX_BUF[0],JRxCount);
+            }
+            rx_mode();
+//            spi_read_buf(0x0a, rxAddress,5);
+//            spi_read_buf(0x10, rxAddress,5);
+            RF_LED_L;
+        }
+#endif
+    }
+
+}
+
+
+/*********************************************************************************
+Function:  ModBus_CRC16
+Description:
+Calculate  ModBus_CRC16
+
+Input:       uchar *puchMsg :   the buffer address
+           uchar crc_count :   length of data buffer
+
+Output:       None
+Return:       CRC
+Others:	      don't care
+*********************************************************************************/
+u16 ModBus_CRC16(u8 *puchMsg,u8 crc_count)
+{
+    u8 i ,j;
+    u8 XORResult;
+    u16 xorCRC = 0xA001; //??CRC????
+    u16 CRCdata = 0xFFFF;
+    for ( i = 0; i <crc_count; i++)
+    {
+        CRCdata ^= puchMsg[i];
+        for (j = 0; j < 8; j++)
+        {
+            XORResult = CRCdata & 1;
+            CRCdata >>= 1;
+            if (XORResult)
+                CRCdata ^= xorCRC;
+        }
+    }
+
+    return  CRCdata;
+}
+
+
+static void JF24D_To_USB_Send_Data(u8 *pBuf,u8 len)
+{
+
+// buffer_in[count_in]
+    do {
+        buffer_in[count_in] = *pBuf;
+        len--;
+        count_in++;
+        pBuf++;
+    } while(len);
+
+    UserToPMABufferCopy(buffer_in, ENDP1_TXADDR, count_in);
+    SetEPTxCount(ENDP1, count_in);
+    SetEPTxValid(ENDP1);
+}
+
+
+/*********************************************************************************
+Function:  USB_To_JF24D_DataProcessing
+Description:
+Calculate  processing the data  transimitted to deveice.
+
+Input:        data_count  the number of data to be transimitted to.
+
+Output:       None
+Return:       CRC
+Others:	      don't care
+*********************************************************************************/
+static void USB_To_JF24D_DataProcessing(u32 data_count)
+{
+
+    //USB_To_USART_Send_Data(&buffer_out[0], count_out);
+    RF_LED_H;
+
+#if(TEST_POWER==0)
+    tx_mode(&buffer_out[0], count_out);
+
+#endif
+
+    /********set deveice channal & address***********/
+    if(buffer_out[0] == 0xAA && buffer_out[1] == 0xAA && count_out == 9)
+    {
+
+        Change_WirelessChannel( buffer_out[8]);
+        WirteRxAddr(buffer_out[2],buffer_out[3],buffer_out[4],
+                    buffer_out[5],buffer_out[6],buffer_out[7]);	//接收六通道
+        JF24D_To_USB_Send_Data(buffer_out,count_out);
+#if(TEST_POWER==1) //
+//set carrier frequency
+        test_mode(buffer_out[8]);
+#endif
+    }
+
+
+    RF_LED_L;
+
+}
+
+
