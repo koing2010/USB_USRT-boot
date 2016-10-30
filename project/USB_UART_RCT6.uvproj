@@ -561,6 +561,13 @@
         </Group>
         <Group>
           <GroupName>mine</GroupName>
+          <Files>
+            <File>
+              <FileName>loadfalsh.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\mine\loadfalsh.c</FilePath>
+            </File>
+          </Files>
         </Group>
         <Group>
           <GroupName>usb_lib</GroupName>

@@ -4,19 +4,19 @@
 
 
 #include "stm32f10x.h"
-#include "pwm.h"
 #include "usb_lib.h"
 #include "usb_desc.h"
 #include "hw_config.h"
 #include "usb_pwr.h"
 #include "loadfalsh.h"
 
-static void USB_Send_Data(u8 *pBuf,u8 len);
-
 extern u32 count_out;
 extern u8 buffer_out[VIRTUAL_COM_PORT_DATA_SIZE];
 extern u32 count_in;
 extern u8 buffer_in[VIRTUAL_COM_PORT_DATA_SIZE];
+
+/* */
+u32  BinFileSize ;
 
 u8 LED_Status;
 void LED_IO_Config(void)
@@ -41,9 +41,9 @@ int main(void)
 
         if ((count_out > 0) && (bDeviceState == CONFIGURED))
         {
-             
-            USB_Send_Data(buffer_out, count_out) ;
-            count_out = 0;
+					 Process_Status status = PROCCESS_SUCCESS;
+           status =  ProcessMsg((pPROCESS_MSG)buffer_out, (u16)count_out);
+           count_out = 0;
             
 					if(LED_Status)
 					{
@@ -95,7 +95,7 @@ u16 ModBus_CRC16(u8 *puchMsg,u8 crc_count)
 }
 
 
-static void USB_Send_Data(u8 *pBuf,u8 len)
+void USB_Send_Data(u8 *pBuf,u8 len)
 {
 
 // buffer_in[count_in]
