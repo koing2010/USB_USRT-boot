@@ -31,6 +31,7 @@ void LED_IO_Config(void)
 }
 int main(void)
 {
+//	  JumpToApplication(0x8005000);
     Set_System();
     USB_Interrupts_Config();
     Set_USBClock();

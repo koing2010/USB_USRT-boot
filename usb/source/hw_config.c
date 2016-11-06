@@ -205,10 +205,10 @@ NVIC_InitTypeDef NVIC_InitStructure;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 
-  /* Enable USART1 Interrupt */
-  NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
-  NVIC_Init(&NVIC_InitStructure);
+//  /* Enable USART1 Interrupt */
+//  NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
+//  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
+//  NVIC_Init(&NVIC_InitStructure);
 }
 
 /*******************************************************************************
