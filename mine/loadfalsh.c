@@ -47,7 +47,7 @@ Others:	      2016-10-26
 *******************************************************************************/
 FLASH_Status EraseOnePage(u16 PageNumb)
 {
-  return FLASH_ErasePage(FALSH_BASE_ADDRESS + 1024 * PAGE_SIZE );
+  return FLASH_ErasePage(FALSH_BASE_ADDRESS + PageNumb * PAGE_SIZE );
 }
 /*******************************************************************************
 Function: ErasePageRange
@@ -65,9 +65,9 @@ FLASH_Status ErasePageRange(uint32_t TotalBytes)
   u8 i,j;
   /* get the number of pages to erased */
   u8 NumberToErased = TotalBytes / PAGE_SIZE;
-  for( i = 0; i < NumberToErased; i ++)
+  for( i = 0; i <= NumberToErased; i ++)// erase one more page
     {
-      status = EraseOnePage(NumberToErased + APP_ADDRES_OFFSET_PAGE);
+      status = EraseOnePage(i + APP_ADDRES_OFFSET_PAGE);
       if(status != FLASH_COMPLETE)
         {
           /* try erase thress times again*/
@@ -172,13 +172,17 @@ static Process_Status ProcessWriteCmd(pPROCESS_MSG Msg)
       if(Msg ->PayoadLenth -2 == sizeof(u32))
         {
           BinFileSize = *(u32*)&Msg ->Data[0];
+					FLASH_Unlock();			
+			    FLASH_ClearFlag( FLASH_FLAG_BSY | FLASH_FLAG_EOP | FLASH_FLAG_PGERR
+				            	   | FLASH_FLAG_WRPRTERR );
           if(FLASH_COMPLETE != ErasePageRange(BinFileSize))
             {
               status = PROCCESS_ERRO_ERASE;
             }else
 						{
-						offset = 0;
+					  	offset = 0;
 						}
+						FLASH_Lock();
         }
       else
         {
@@ -197,9 +201,12 @@ static Process_Status ProcessWriteCmd(pPROCESS_MSG Msg)
           u8 circle = (Msg->PayoadLenth - sizeof(u32) )/sizeof(u32);
 					u8 i = 0;
 					FLASH_Unlock();
+
           for(i = 0; i < circle; i++)
             {
-					
+
+			        FLASH_ClearFlag(FLASH_FLAG_BSY | FLASH_FLAG_EOP | FLASH_FLAG_PGERR | FLASH_FLAG_WRPRTERR);
+
              if(FLASH_COMPLETE != FLASH_ProgramWord(offset+ FALSH_BASE_ADDRESS+APP_ADDRES_OFFSET_PAGE*PAGE_SIZE , buf[i]))
 						 {
 							 FLASH_Lock();
@@ -207,6 +214,7 @@ static Process_Status ProcessWriteCmd(pPROCESS_MSG Msg)
 							 break;
 						 }
               offset += sizeof(u32);
+						 
             }
 						FLASH_Lock();
         }
